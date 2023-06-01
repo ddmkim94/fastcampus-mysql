@@ -8,14 +8,11 @@ import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 
-import java.util.Arrays;
-
 @Repository
 @RequiredArgsConstructor
 public class MemberRepository {
 
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
-
     public Member save(Member member) {
         if (member.getId() == null) return insert(member);
         return update(member);
@@ -23,11 +20,10 @@ public class MemberRepository {
 
     private Member insert(Member member) {
         SimpleJdbcInsert jdbcInsert = new SimpleJdbcInsert(namedParameterJdbcTemplate.getJdbcTemplate())
-                .withTableName("Member")
+                .withTableName("Members")
                 .usingGeneratedKeyColumns("id");
 
         SqlParameterSource params = new BeanPropertySqlParameterSource(member);
-        System.out.println(Arrays.toString(params.getParameterNames()));
         Long id = jdbcInsert.executeAndReturnKey(params).longValue();
 
         return Member.builder()
