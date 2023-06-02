@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -20,22 +21,38 @@ public class MemberRepository {
 
     private static final String TABLE = "Members";
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+    private static RowMapper<Member> rowMapper = (resultSet, rowNum) -> Member.builder()
+            .id(resultSet.getLong("id"))
+            .email(resultSet.getString("email"))
+            .nickname(resultSet.getString("nickname"))
+            .birthDay(resultSet.getObject("birthDay", LocalDateTime.class))
+            .createdAt(resultSet.getObject("createdAt", LocalDateTime.class))
+            .build();
+
 
     public Optional<Member> findById(Long id) {
         String sql = "SELECT * FROM %s WHERE id = :id".formatted(TABLE);
         MapSqlParameterSource param = new MapSqlParameterSource()
                 .addValue("id", id);
 
-        RowMapper<Member> rowMapper = (resultSet, rowNum) -> Member.builder()
-                .id(resultSet.getLong("id"))
-                .email(resultSet.getString("email"))
-                .nickname(resultSet.getString("nickname"))
-                .birthDay(resultSet.getObject("birthDay", LocalDateTime.class))
-                .createdAt(resultSet.getObject("createdAt", LocalDateTime.class))
-                .build();
-
         Member member = namedParameterJdbcTemplate.queryForObject(sql, param, rowMapper);
         return Optional.ofNullable(member);
+    }
+
+    public List<Member> findAllByIdIn(List<Long> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+
+        String sql = """
+                SELECT *
+                FROM %s
+                WHERE id in (:ids)
+                """.formatted(TABLE);
+
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("ids", ids);
+        return namedParameterJdbcTemplate.query(sql, params, rowMapper);
     }
 
     public Member save(Member member) {
