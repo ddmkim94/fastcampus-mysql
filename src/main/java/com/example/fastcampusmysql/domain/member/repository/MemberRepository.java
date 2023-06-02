@@ -39,7 +39,9 @@ public class MemberRepository {
     }
 
     public Member save(Member member) {
-        if (member.getId() == null) return insert(member);
+        if (member.getId() == null) {
+            return insert(member);
+        }
         return update(member);
     }
 
@@ -61,7 +63,9 @@ public class MemberRepository {
     }
 
     private Member update(Member member) {
-        // TODO: implemented..
+        String sql = "update %s set email = :email, nickname = :nickname, birthday = :birthDay where id = :id".formatted(TABLE);
+        SqlParameterSource params = new BeanPropertySqlParameterSource(member);
+        namedParameterJdbcTemplate.update(sql, params);
         return member;
     }
 }
