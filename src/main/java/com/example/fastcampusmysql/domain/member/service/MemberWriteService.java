@@ -2,6 +2,8 @@ package com.example.fastcampusmysql.domain.member.service;
 
 import com.example.fastcampusmysql.domain.member.dto.RegisterMemberCommand;
 import com.example.fastcampusmysql.domain.member.entity.Member;
+import com.example.fastcampusmysql.domain.member.entity.MemberNicknameHistory;
+import com.example.fastcampusmysql.domain.member.repository.MemberNicknameHistoryRepository;
 import com.example.fastcampusmysql.domain.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -11,6 +13,7 @@ import org.springframework.stereotype.Service;
 public class MemberWriteService {
 
     private final MemberRepository memberRepository;
+    private final MemberNicknameHistoryRepository memberNickNameHistoryRepository;
 
     public Member register(RegisterMemberCommand command) {
         Member member = Member.builder()
@@ -20,7 +23,9 @@ public class MemberWriteService {
                 .build();
 
         // member save!
-        return memberRepository.save(member);
+        Member savedMember = memberRepository.save(member);
+        saveMemberNicknameHistory(savedMember);
+        return savedMember;
     }
 
     public void changeNickName(Long id, String nickname) {
@@ -31,6 +36,17 @@ public class MemberWriteService {
         Member member = memberRepository.findById(id).orElseThrow();
         member.changeNickName(nickname);
         memberRepository.save(member);
-        // TODO: 변경 내역 히스토리를 저장한다.
+
+        saveMemberNicknameHistory(member);
+
+    }
+
+    private void saveMemberNicknameHistory(Member member) {
+        MemberNicknameHistory history = MemberNicknameHistory.builder()
+                .memberId(member.getId())
+                .nickname(member.getNickname())
+                .build();
+
+        memberNickNameHistoryRepository.save(history);
     }
 }

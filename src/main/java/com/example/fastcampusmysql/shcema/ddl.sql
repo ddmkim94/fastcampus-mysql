@@ -33,7 +33,6 @@ create unique index Follow_fromMemberId_toMemberId_uindex
     on Follow (fromMemberId, toMemberId);
 
 
-/**
 create table POST
 (
     id int auto_increment,
@@ -44,16 +43,12 @@ create table POST
     constraint POST_id_uindex
         primary key (id)
 );
- */
 
 create index POST__index_member_id
     on POST (memberId);
 
-/*
 create index POST__index_created_date
     on POST (createdDate);
-
- */
 
 
 
