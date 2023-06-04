@@ -1,10 +1,15 @@
 package com.example.fastcampusmysql.domain.post.repository;
 
+import com.example.fastcampusmysql.domain.PageHelper;
 import com.example.fastcampusmysql.domain.follow.entity.Follow;
 import com.example.fastcampusmysql.domain.post.dto.DailyPostCount;
 import com.example.fastcampusmysql.domain.post.dto.DailyPostCountRequest;
 import com.example.fastcampusmysql.domain.post.entity.Post;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.BeanPropertySqlParameterSource;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -23,6 +28,7 @@ public class PostRepository {
 
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     private static final String TABLE = "Post";
+
     private static final RowMapper<DailyPostCount> DAILY_POST_COUNT_MAPPER =
             (resultSet, rowNum) -> new DailyPostCount(
                     resultSet.getLong("memberId"),
@@ -30,6 +36,13 @@ public class PostRepository {
                     resultSet.getLong("count")
             );
 
+    private static final RowMapper<Post> POST_MAPPER = (resultSet, rowNum) -> Post.builder()
+                    .id(resultSet.getLong("id"))
+                    .memberId(resultSet.getLong("memberId"))
+                    .contents(resultSet.getString("contents"))
+                    .createdDate(resultSet.getObject("createdDate", LocalDate.class))
+                    .createdAt(resultSet.getObject("createdAt", LocalDateTime.class))
+                    .build();
 
     public List<DailyPostCount> groupByCreatedDate(DailyPostCountRequest request) {
         String sql = """
@@ -41,6 +54,35 @@ public class PostRepository {
 
         BeanPropertySqlParameterSource params = new BeanPropertySqlParameterSource(request);
         return namedParameterJdbcTemplate.query(sql, params, DAILY_POST_COUNT_MAPPER);
+    }
+
+    public Page<Post> findAllByMemberId(Long memberId, Pageable pageable) {
+        String sql = """
+                SELECT *
+                FROM %s
+                WHERE memberId = :memberId
+                ORDER BY %s
+                LIMIT :size OFFSET :offset
+                """.formatted(TABLE, PageHelper.orderBy(pageable.getSort()));
+
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("memberId", memberId)
+                .addValue("size", pageable.getPageSize())
+                .addValue("offset", pageable.getOffset());
+
+        List<Post> posts = namedParameterJdbcTemplate.query(sql, params, POST_MAPPER);
+        return new PageImpl<>(posts, pageable, getCount(memberId));
+    }
+
+    private Long getCount(Long memberId) {
+        String sql = """
+                SELECT count(id)
+                FROM %s
+                WHERE memberId = :memberId
+                """.formatted(TABLE);
+
+        MapSqlParameterSource param = new MapSqlParameterSource().addValue("memberId", memberId);
+        return namedParameterJdbcTemplate.queryForObject(sql, param, Long.class);
     }
 
     public Post save(Post post) {
