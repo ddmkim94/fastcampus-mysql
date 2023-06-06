@@ -28,4 +28,10 @@ public class PostWriteService {
         post.incrementLikeCount();
         postRepository.save(post);
     }
+
+    public void likePostByOptimisticLock(Long postId) {
+        Post post = postRepository.findById(postId, false).orElseThrow();
+        post.incrementLikeCount();
+        postRepository.save(post);
+    }
 }
