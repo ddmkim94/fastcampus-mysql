@@ -1,5 +1,6 @@
 package com.example.fastcampusmysql.domain.post.repository;
 
+import com.example.fastcampusmysql.domain.member.entity.Member;
 import com.example.fastcampusmysql.util.PageHelper;
 import com.example.fastcampusmysql.domain.post.dto.DailyPostCount;
 import com.example.fastcampusmysql.domain.post.dto.DailyPostCountRequest;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
@@ -35,12 +37,13 @@ public class PostRepository {
             );
 
     private static final RowMapper<Post> POST_MAPPER = (resultSet, rowNum) -> Post.builder()
-                    .id(resultSet.getLong("id"))
-                    .memberId(resultSet.getLong("memberId"))
-                    .contents(resultSet.getString("contents"))
-                    .createdDate(resultSet.getObject("createdDate", LocalDate.class))
-                    .createdAt(resultSet.getObject("createdAt", LocalDateTime.class))
-                    .build();
+            .id(resultSet.getLong("id"))
+            .memberId(resultSet.getLong("memberId"))
+            .contents(resultSet.getString("contents"))
+            .createdDate(resultSet.getObject("createdDate", LocalDate.class))
+            .likeCount(resultSet.getLong("likeCount"))
+            .createdAt(resultSet.getObject("createdAt", LocalDateTime.class))
+            .build();
 
     public List<DailyPostCount> groupByCreatedDate(DailyPostCountRequest request) {
         String sql = """
@@ -70,6 +73,17 @@ public class PostRepository {
 
         List<Post> posts = namedParameterJdbcTemplate.query(sql, params, POST_MAPPER);
         return new PageImpl<>(posts, pageable, getCount(memberId));
+    }
+
+    public Optional<Post> findById(Long postId, Boolean requiredLock) {
+        String sql = "SELECT * FROM %s WHERE id = :postId".formatted(TABLE);
+        if (requiredLock) {
+            sql += " FOR UPDATE";
+        }
+        MapSqlParameterSource param = new MapSqlParameterSource().addValue("postId", postId);
+
+        Post nullablePost = namedParameterJdbcTemplate.queryForObject(sql, param, POST_MAPPER);
+        return Optional.ofNullable(nullablePost);
     }
 
     private Long getCount(Long memberId) {
@@ -172,7 +186,7 @@ public class PostRepository {
         if (post.getId() == null) {
             return insert(post);
         }
-        throw new UnsupportedOperationException("Post는 갱신을 지원하지 않습니다.");
+        return update(post);
     }
 
     public void bulkInsert(List<Post> posts) {
@@ -204,5 +218,21 @@ public class PostRepository {
                 .createdDate(post.getCreatedDate())
                 .createdAt(post.getCreatedAt())
                 .build();
+    }
+
+    private Post update(Post post) {
+        String sql = """
+                update %s set
+                    memberId = :memberId,
+                    contents = :contents,
+                    createdDate = :createdDate,
+                    likeCount = :likeCount,
+                    createdAt = :createdAt
+                where id = :id
+                """.formatted(TABLE);
+
+        SqlParameterSource params = new BeanPropertySqlParameterSource(post);
+        namedParameterJdbcTemplate.update(sql, params);
+        return post;
     }
 }
