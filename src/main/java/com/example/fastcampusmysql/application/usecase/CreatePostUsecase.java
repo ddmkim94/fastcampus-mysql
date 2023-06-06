@@ -7,6 +7,7 @@ import com.example.fastcampusmysql.domain.post.service.PostWriteService;
 import com.example.fastcampusmysql.domain.post.service.TimelineWriteService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
